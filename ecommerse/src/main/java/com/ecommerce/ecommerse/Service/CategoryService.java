@@ -21,27 +21,31 @@ public class CategoryService {
         return categoryRepo.findAll();
     }
 
-    public Category getCategoryById(int id) {
-        return categoryRepo.findById(id).get();
+    public Category getCategoryById(long id) { // Changed id to long
+        return categoryRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Category not found with id " + id));
     }
-    public void saveCategory(Category category) {
-        categoryRepo.save(category);
+
+    public Category saveCategory(Category category) { // Changed return type to Category
+        return categoryRepo.save(category);
     }
-    public void updateCategory(Category category) {
-        Optional<Category> optionalCategory = categoryRepo.findById(category.getId());
-        if (optionalCategory.isPresent()) {
-            Category existingCategory = optionalCategory.get();
-            existingCategory.setName(category.getName());
-            // Update other fields if necessary
-            categoryRepo.save(existingCategory);
-        } else {
-            throw new EntityNotFoundException("Category not found with id " + category.getId());
+
+    public Category updateCategory(Category category) { // Changed return type to Category
+        // Ensure ID is not null for update
+        if (category.getId() == null) {
+            throw new IllegalArgumentException("Category ID must not be null for update.");
         }
+        Category existingCategory = categoryRepo.findById(category.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Category not found with id " + category.getId()));
+
+        existingCategory.setName(category.getName());
+        // Update other fields if necessary
+        return categoryRepo.save(existingCategory);
     }
 
-
-
-    public void deleteCategoryById(int id) {
+    public void deleteCategoryById(long id) { // Changed id to long
+        if (!categoryRepo.existsById(id)) {
+            throw new EntityNotFoundException("Category not found with id " + id + " for delete operation.");
+        }
         categoryRepo.deleteById(id);
     }
 
@@ -49,5 +53,4 @@ public class CategoryService {
         Pageable pageable = PageRequest.of(page, size);
         return categoryRepo.findAll(pageable);
     }
-
 }

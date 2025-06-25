@@ -1,77 +1,87 @@
 package com.ecommerce.ecommerse.Controllers;
 
 import com.ecommerce.ecommerse.Models.Product;
-import com.ecommerce.ecommerse.Models.Request;
+// import com.ecommerce.ecommerse.Models.Request; // Replaced with specific params or DTOs
 import com.ecommerce.ecommerse.Service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
+@RequestMapping("/products") // Added base path
 public class ProductController {
+
     @Autowired
     private ProductService productService;
 
-    @PostMapping("/Admin/AddProduct")
-    public ResponseEntity<?> AddProduct(@RequestBody Product product) {
-        productService.AddProduct(product);
-        return ResponseEntity.ok(true);
+    @PostMapping("/admin/add") // Changed path for consistency
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Product> addProduct(@RequestBody Product product) {
+        Product newProduct = productService.AddProduct(product); // Assuming AddProduct returns the created product
+        return ResponseEntity.ok(newProduct);
     }
 
-    @PutMapping("/Admin/UpdateProduct")
-    public ResponseEntity<?> UpdateProduct(@RequestBody Product product) {
-        productService.updateProduct(product);
-        return ResponseEntity.ok().build();
+    @PutMapping("/admin/update") // Changed path for consistency
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Product> updateProduct(@RequestBody Product product) {
+        Product updatedProduct = productService.updateProduct(product); // Assuming updateProduct returns the updated product
+        return ResponseEntity.ok(updatedProduct);
     }
 
-    @GetMapping("/GetAllProduct")
-    public ResponseEntity<?> GetAllProduct() {
+    @GetMapping // Path: /products
+    public ResponseEntity<List<Product>> getAllProducts() {
         return ResponseEntity.ok().body(productService.getAllProducts());
     }
-    @GetMapping("/GetAllProductPaginated")
-    public ResponseEntity<?> getAllProductsPaginated(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size){
-                Page<Product> products = productService.getAllProductsPaginated(page, size);
-                return ResponseEntity.ok(products);
-        }
 
-    @GetMapping("/GetProductById/{id}")
-    public ResponseEntity<?> GetProductById(@PathVariable int id) {
-        return ResponseEntity.ok().body(productService.getProductById(id));
+    @GetMapping("/paginated") // Path: /products/paginated
+    public ResponseEntity<Page<Product>> getAllProductsPaginated(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Page<Product> products = productService.getAllProductsPaginated(page, size);
+        return ResponseEntity.ok(products);
     }
 
-    @GetMapping("/Admin/GetDeletedProducts")
-    public ResponseEntity<?> GetDeletedProducts() {
+    @GetMapping("/{id}") // Path: /products/{id}
+    public ResponseEntity<Product> getProductById(@PathVariable long id) { // Changed to long for typical ID types
+        Product product = productService.getProductById(id);
+        if (product == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(product);
+    }
+
+    @GetMapping("/admin/deleted") // Path: /products/admin/deleted
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<Product>> getDeletedProducts() {
         return ResponseEntity.ok().body(productService.getDeletedProducts());
     }
 
-    @GetMapping("/GetProductsByCategoryName")
-    public ResponseEntity<List<Product>> getProductsByCategoryName(@RequestBody Request request) {
-        List<Product> products = productService.GetProductByCategoryName(request.getCategoryName());
+    @GetMapping("/category/{categoryName}") // Path: /products/category/{categoryName}
+    public ResponseEntity<List<Product>> getProductsByCategoryName(@PathVariable String categoryName) {
+        List<Product> products = productService.GetProductByCategoryName(categoryName);
         if (products.isEmpty()) {
-            return ResponseEntity.status(404).body(null); // Category or products not found
+            return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(products);
     }
 
-    @DeleteMapping("/Admin/DeleteProduct/{id}")
-    public ResponseEntity<?> DeleteProduct(@PathVariable int id) {
+    @DeleteMapping("/admin/delete/{id}") // Path: /products/admin/delete/{id}
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteProduct(@PathVariable long id) { // Changed to long
         productService.deleteProduct(id);
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/SearchProduct")
-    public ResponseEntity<?> SearchProduct(@RequestBody Request request) {
-        return ResponseEntity.ok().body(productService.FindByName(request.getProductName()));
+    @GetMapping("/search") // Path: /products/search?name=...
+    public ResponseEntity<List<Product>> searchProduct(@RequestParam("name") String productName) {
+        List<Product> products = productService.FindByName(productName);
+         if (products.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(products);
     }
-
-
-
-
-
-
 }
